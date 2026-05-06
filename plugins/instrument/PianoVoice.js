@@ -39,6 +39,8 @@ export class PianoVoice {
   static type = 'instrument'
   static id = 'piano-voice'
   static version = '1.0.0'
+  static label = 'Triad'
+  static description = 'Root-position major or minor triad based on active key'
 
   constructor(opts = {}) {
     this.waveform = opts.waveform ?? 'sine'

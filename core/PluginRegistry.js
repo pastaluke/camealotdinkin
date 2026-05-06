@@ -11,6 +11,8 @@ export const PluginRegistry = {
 
   all() { return [..._registry.values()] },
 
+  byType(type) { return [..._registry.values()].filter(C => C.type === type) },
+
   instantiate(PluginClass, engine, audioCtx) {
     const instance = new PluginClass(engine, audioCtx)
     EventBus.emit('plugin:loaded', { id: PluginClass.id })
