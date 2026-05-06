@@ -85,6 +85,22 @@ export class InstrumentHost {
     EventBus.emit('key:press', { code })
   }
 
+  async swapInstrument(PluginClass) {
+    const idx = this.plugins.findIndex(p => p.constructor.type === 'instrument')
+    const toRemove = this.plugins.filter(p => p.constructor.type === 'instrument')
+    for (const p of toRemove) p.destroy?.()
+    this.plugins = this.plugins.filter(p => p.constructor.type !== 'instrument')
+
+    const p = new PluginClass()
+    p._host = this
+    p._engine = this.engine
+    p._audioCtx = this.audioCtx
+    if (typeof p.init === 'function') await p.init(this.engine, this.audioCtx)
+    this.plugins.splice(idx < 0 ? this.plugins.length : idx, 0, p)
+
+    EventBus.emit('instrument:changed', { id: PluginClass.id })
+  }
+
   releaseKey(code) {
     for (const p of this.plugins) {
       if (typeof p.onKeyRelease === 'function') p.onKeyRelease(code)
