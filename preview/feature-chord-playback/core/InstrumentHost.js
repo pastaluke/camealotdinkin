@@ -43,7 +43,9 @@ export class InstrumentHost {
   }
 
   _bindCanvasInput() {
-    const uiPlugins = () => this.plugins.filter(p => p.constructor.type === 'ui')
+    const interactivePlugins = () => this.plugins.filter(p =>
+      p.constructor.type === 'ui' || p.constructor.type === 'apparatus'
+    )
 
     const dispatch = (e, method) => {
       const rect = this.canvas.getBoundingClientRect()
@@ -54,8 +56,8 @@ export class InstrumentHost {
         : [{ x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY }]
 
       for (const { x, y } of points) {
-        for (const ui of uiPlugins()) {
-          if (typeof ui[method] === 'function') ui[method](x, y, e)
+        for (const p of interactivePlugins()) {
+          if (typeof p[method] === 'function') p[method](x, y, e)
         }
       }
       if (e.cancelable) e.preventDefault()
