@@ -25,10 +25,11 @@ export class RootVoice {
   static description = 'Single root note — pitch only, no chord'
 
   constructor(opts = {}) {
-    this.waveform = opts.waveform ?? 'sine'
-    this.attack   = opts.attack   ?? 0.01
-    this.release  = opts.release  ?? 0.6
-    this.volume   = opts.volume   ?? 0.5
+    this.waveform   = opts.waveform   ?? 'sine'
+    this.attack     = opts.attack     ?? 0.01
+    this.release    = opts.release    ?? 0.6
+    this.volume     = opts.volume     ?? 0.5
+    this.polyphonic = opts.polyphonic ?? false
 
     this._audioCtx = null
     this._engine   = null
@@ -41,7 +42,7 @@ export class RootVoice {
   }
 
   onKeyPress(code) {
-    this._stopAll()
+    if (!this.polyphonic) this._stopAll()
     const key = this._engine.getKey(code)
     if (!key) return
 
