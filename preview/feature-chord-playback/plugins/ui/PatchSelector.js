@@ -82,7 +82,7 @@ export class PatchSelector {
     polyBtn.dataset.poly = 'off'
     polyBtn.style.cssText = `
       background: #1a1a2a;
-      color: #556;
+      color: #aab;
       border: 1px solid #334;
       border-radius: 6px;
       padding: 8px 14px;
@@ -115,7 +115,7 @@ export class PatchSelector {
     if (!this._polyBtn) return
     this._polyBtn.dataset.poly = on ? 'on' : 'off'
     this._polyBtn.style.background  = on ? '#1a3a2a' : '#1a1a2a'
-    this._polyBtn.style.color       = on ? '#44cc88' : '#556'
+    this._polyBtn.style.color       = on ? '#44cc88' : '#aab'
     this._polyBtn.style.borderColor = on ? '#336644' : '#334'
   }
 
