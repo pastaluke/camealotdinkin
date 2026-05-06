@@ -1,28 +1,45 @@
-name: Deploy to GitHub Pages
+name: Deploy
 
 on:
+  push:
+    branches: [main, staging, 'feature/**']
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  contents: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Resolve deploy target
+        id: target
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          if [ "$BRANCH" = "main" ]; then
+            FOLDER="."
+            URL="https://pastaluke.github.io/camealotdinkin/"
+          elif [ "$BRANCH" = "staging" ]; then
+            FOLDER="staging"
+            URL="https://pastaluke.github.io/camealotdinkin/staging/"
+          else
+            SAFE=$(echo "$BRANCH" | sed 's|/|-|g')
+            FOLDER="preview/${SAFE}"
+            URL="https://pastaluke.github.io/camealotdinkin/preview/${SAFE}/"
+          fi
+          echo "folder=${FOLDER}" >> $GITHUB_OUTPUT
+          echo "url=${URL}" >> $GITHUB_OUTPUT
+          echo "Deploying branch '$BRANCH' → $URL"
+
+      - name: Deploy to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: .
-      - uses: actions/deploy-pages@v4
-        id: deployment
+          branch: gh-pages
+          folder: .
+          target-folder: ${{ steps.target.outputs.folder }}
+          clean: false
+
+      - name: Print live URL
+        run: echo "Live at ${{ steps.target.outputs.url }}"
