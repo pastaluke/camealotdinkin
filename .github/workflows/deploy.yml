@@ -1,14 +1,6 @@
-name: CI / Deploy
-
-# Branch flow:
-#   feature/* → PR → staging  (validate only)
-#   staging    → PR → main     (validate + deploy to GitHub Pages)
+name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main, staging]
-  pull_request:
-    branches: [main, staging]
   workflow_dispatch:
 
 permissions:
@@ -21,55 +13,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ── Validate ─────────────────────────────────────────────────────────────
-  # Runs on every push and every PR to staging or main.
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check all ES module files parse
-        run: |
-          node --input-type=module <<'EOF'
-          import { readFileSync, readdirSync, statSync } from 'fs'
-          import { join } from 'path'
-          function walk(dir) {
-            for (const f of readdirSync(dir)) {
-              const p = join(dir, f)
-              if (statSync(p).isDirectory()) { walk(p); continue }
-              if (p.endsWith('.js')) {
-                try { new Function(readFileSync(p, 'utf8')) }
-                catch(e) { console.error('Parse error in', p, e.message); process.exit(1) }
-              }
-            }
-          }
-          walk('.')
-          console.log('All JS files parsed OK')
-          EOF
-
-      - name: Verify index.html exists
-        run: test -f index.html && echo "index.html OK"
-
-  # ── Deploy ────────────────────────────────────────────────────────────────
-  # Only runs on push to main (not on PRs, not on staging).
   deploy:
-    needs: validate
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: .
-
-      - name: Deploy to GitHub Pages
+      - uses: actions/deploy-pages@v4
         id: deployment
-        uses: actions/deploy-pages@v4
