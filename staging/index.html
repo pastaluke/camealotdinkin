@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Camelot Instrument</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #0a0a10;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+    }
+
+    #stage {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <script type="module">
+    // Resize canvas to device pixel ratio for crisp rendering.
+    const canvas = document.getElementById('stage')
+    function resize() {
+      const dpr = window.devicePixelRatio || 1
+      canvas.width  = window.innerWidth  * dpr
+      canvas.height = window.innerHeight * dpr
+      canvas.style.width  = window.innerWidth  + 'px'
+      canvas.style.height = window.innerHeight + 'px'
+    }
+    resize()
+    window.addEventListener('resize', resize)
+  </script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
