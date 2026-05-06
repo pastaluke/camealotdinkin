@@ -18,7 +18,11 @@ export class PatchSelector {
 
   init(engine, audioCtx) {
     this._buildDOM()
-    EventBus.on('instrument:changed', ({ id }) => this._setActive(id))
+    EventBus.on('instrument:changed', ({ id }) => {
+      this._setActive(id)
+      const instrument = this._host?.plugins.find(p => p.constructor.type === 'instrument')
+      if (instrument) this._syncPoly(instrument.polyphonic)
+    })
   }
 
   _buildDOM() {
@@ -68,12 +72,51 @@ export class PatchSelector {
       el.appendChild(btn)
     }
 
+    // Poly toggle
+    const divider = document.createElement('div')
+    divider.style.cssText = 'height:1px;background:#223;margin:2px 0'
+    el.appendChild(divider)
+
+    const polyBtn = document.createElement('button')
+    polyBtn.textContent = 'POLY'
+    polyBtn.dataset.poly = 'off'
+    polyBtn.style.cssText = `
+      background: #1a1a2a;
+      color: #556;
+      border: 1px solid #334;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font: 700 11px/1 system-ui, sans-serif;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
+    `
+    polyBtn.addEventListener('click', () => {
+      const instrument = this._host?.plugins.find(p => p.constructor.type === 'instrument')
+      if (!instrument) return
+      instrument.polyphonic = !instrument.polyphonic
+      this._syncPoly(instrument.polyphonic)
+    })
+    el.appendChild(polyBtn)
+    this._polyBtn = polyBtn
+
     document.body.appendChild(el)
     this._el = el
 
-    // Highlight whichever instrument is active at boot
     const active = this._host?.plugins.find(p => p.constructor.type === 'instrument')
-    if (active) this._setActive(active.constructor.id)
+    if (active) {
+      this._setActive(active.constructor.id)
+      this._syncPoly(active.polyphonic)
+    }
+  }
+
+  _syncPoly(on) {
+    if (!this._polyBtn) return
+    this._polyBtn.dataset.poly = on ? 'on' : 'off'
+    this._polyBtn.style.background  = on ? '#1a3a2a' : '#1a1a2a'
+    this._polyBtn.style.color       = on ? '#44cc88' : '#556'
+    this._polyBtn.style.borderColor = on ? '#336644' : '#334'
   }
 
   _setActive(id) {
