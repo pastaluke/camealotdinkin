@@ -1,6 +1,6 @@
-// PianoVoice — synthesises a soft piano-like tone using Web Audio oscillators.
-// On press: plays root note of the active key.
-// On hold (>200 ms): adds the full triad (root, 3rd, 5th).
+// PianoVoice — plays a root-position triad for the active Camelot key.
+// Major keys: root + major third (+4 st) + fifth (+7 st)
+// Minor keys: root + minor third (+3 st) + fifth (+7 st)
 
 const NOTE_FREQS = {
   'C': 261.63, 'C#': 277.18, 'Db': 277.18,
@@ -18,16 +18,36 @@ function noteFreq(name, octave = 4) {
   return base * Math.pow(2, octave - 4)
 }
 
+// Shift a frequency by n semitones.
+function semitones(freq, n) {
+  return freq * Math.pow(2, n / 12)
+}
+
+// Returns [freq, gainScale] pairs for the triad of a given key.
+function triadVoices(key) {
+  const root = noteFreq(key.root, 4)
+  const third = key.type === 'major' ? semitones(root, 4) : semitones(root, 3)
+  const fifth = semitones(root, 7)
+  return [
+    [root,  1.0],
+    [third, 0.7],
+    [fifth, 0.7],
+  ]
+}
+
 export class PianoVoice {
   static type = 'instrument'
   static id = 'piano-voice'
   static version = '1.0.0'
+  static label = 'Triad'
+  static description = 'Root-position major or minor triad based on active key'
 
   constructor(opts = {}) {
-    this.waveform = opts.waveform ?? 'sine'
-    this.attack   = opts.attack   ?? 0.01
-    this.release  = opts.release  ?? 0.6
-    this.volume   = opts.volume   ?? 0.4
+    this.waveform   = opts.waveform   ?? 'sine'
+    this.attack     = opts.attack     ?? 0.01
+    this.release    = opts.release    ?? 0.6
+    this.volume     = opts.volume     ?? 0.4
+    this.polyphonic = opts.polyphonic ?? false
 
     this._audioCtx = null
     this._engine   = null
@@ -40,7 +60,7 @@ export class PianoVoice {
   }
 
   onKeyPress(code) {
-    this._stopAll()
+    if (!this.polyphonic) this._stopAll()
     const key = this._engine.getKey(code)
     if (!key) return
 
@@ -48,10 +68,7 @@ export class PianoVoice {
     const now = ctx.currentTime
     const nodes = []
 
-    // Root note + octave above (soft piano: fundamental + soft upper harmonic)
-    const freqs = [noteFreq(key.root, 4), noteFreq(key.root, 5) * 0.3]
-
-    for (const [freq, gainScale] of freqs.map((f, i) => [f, i === 0 ? 1 : 0.3])) {
+    for (const [freq, gainScale] of triadVoices(key)) {
       const osc  = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.type = this.waveform

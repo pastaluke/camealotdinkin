@@ -102,8 +102,13 @@ export class KalimbaApparatus {
     const notes = key.notes // 7 notes
     const tineCount = notes.length
 
-    const bodyH   = Math.min(H * 0.22, 160)
-    const bodyY   = this.position === 'bottom' ? H - bodyH - 8 : 8
+    // dpr lets us cap dimensions in CSS pixels so the kalimba scales correctly
+    // on high-density screens instead of being tiny in canvas pixels.
+    const dpr     = canvas.width / (canvas.offsetWidth || canvas.width)
+    const bodyH   = Math.round(Math.min(window.innerHeight * 0.22, 180) * dpr)
+    // 70 CSS px bottom margin keeps tines above OS home-gesture / browser chrome zones.
+    const safeBottom = Math.round(70 * dpr)
+    const bodyY   = this.position === 'bottom' ? H - bodyH - safeBottom : 8
     const bodyX   = W * 0.1
     const bodyW   = W * 0.8
 

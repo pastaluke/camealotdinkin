@@ -43,7 +43,9 @@ export class InstrumentHost {
   }
 
   _bindCanvasInput() {
-    const uiPlugins = () => this.plugins.filter(p => p.constructor.type === 'ui')
+    const interactivePlugins = () => this.plugins.filter(p =>
+      p.constructor.type === 'ui' || p.constructor.type === 'apparatus'
+    )
 
     const dispatch = (e, method) => {
       const rect = this.canvas.getBoundingClientRect()
@@ -54,8 +56,8 @@ export class InstrumentHost {
         : [{ x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY }]
 
       for (const { x, y } of points) {
-        for (const ui of uiPlugins()) {
-          if (typeof ui[method] === 'function') ui[method](x, y, e)
+        for (const p of interactivePlugins()) {
+          if (typeof p[method] === 'function') p[method](x, y, e)
         }
       }
       if (e.cancelable) e.preventDefault()
@@ -83,6 +85,22 @@ export class InstrumentHost {
       }
     }
     EventBus.emit('key:press', { code })
+  }
+
+  async swapInstrument(PluginClass) {
+    const idx = this.plugins.findIndex(p => p.constructor.type === 'instrument')
+    const toRemove = this.plugins.filter(p => p.constructor.type === 'instrument')
+    for (const p of toRemove) p.destroy?.()
+    this.plugins = this.plugins.filter(p => p.constructor.type !== 'instrument')
+
+    const p = new PluginClass()
+    p._host = this
+    p._engine = this.engine
+    p._audioCtx = this.audioCtx
+    if (typeof p.init === 'function') await p.init(this.engine, this.audioCtx)
+    this.plugins.splice(idx < 0 ? this.plugins.length : idx, 0, p)
+
+    EventBus.emit('instrument:changed', { id: PluginClass.id })
   }
 
   releaseKey(code) {
