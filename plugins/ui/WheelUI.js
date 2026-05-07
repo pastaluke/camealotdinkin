@@ -10,6 +10,9 @@ export class WheelUI {
     this.showNoteNames = opts.showNoteNames ?? true
     this.showCompatibleHighlight = opts.showCompatibleHighlight ?? true
     this.ringLabels = opts.ringLabels ?? true
+    // CSS px offsets so the wheel avoids the top bar and bottom kalimba.
+    this.topOffsetCssPx    = opts.topOffsetCssPx    ?? 0
+    this.bottomOffsetCssPx = opts.bottomOffsetCssPx ?? 0
 
     this._engine = null
     this._host = null
@@ -59,9 +62,13 @@ export class WheelUI {
   render(canvas, ctx) {
     const W = canvas.width
     const H = canvas.height
+    const dpr = canvas.width / (canvas.offsetWidth || canvas.width)
+    const topPx    = Math.round(this.topOffsetCssPx    * dpr)
+    const bottomPx = Math.round(this.bottomOffsetCssPx * dpr)
+    const availH   = H - topPx - bottomPx
     const cx = W / 2
-    const cy = H / 2
-    const outerR = Math.min(W, H) * 0.46
+    const cy = topPx + availH / 2
+    const outerR = Math.min(W, availH) * 0.46
     const innerR = outerR * 0.58
     const holeR  = outerR * 0.22
 
