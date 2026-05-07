@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# One deploy at a time — queue rather than cancel so no push is lost.
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -30,16 +35,56 @@ jobs:
             URL="https://pastaluke.github.io/camealotdinkin/preview/${SAFE}/"
           fi
           echo "folder=${FOLDER}" >> $GITHUB_OUTPUT
-          echo "url=${URL}" >> $GITHUB_OUTPUT
-          echo "Deploying branch '$BRANCH' → $URL"
+          echo "url=${URL}"       >> $GITHUB_OUTPUT
+          echo "Branch '${BRANCH}' → ${FOLDER}"
 
-      - name: Deploy to gh-pages
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: gh-pages
-          folder: .
-          target-folder: ${{ steps.target.outputs.folder }}
-          clean: false
+      - name: Publish to gh-pages
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          REPO_URL="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          FOLDER="${{ steps.target.outputs.folder }}"
+          PAGES=/tmp/pages
 
-      - name: Print live URL
-        run: echo "Live at ${{ steps.target.outputs.url }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Clone gh-pages into a temp dir, or create it fresh if it doesn't exist yet.
+          if git ls-remote --exit-code --heads "$REPO_URL" gh-pages >/dev/null 2>&1; then
+            git clone --depth=1 --branch=gh-pages "$REPO_URL" "$PAGES"
+          else
+            mkdir "$PAGES"
+            git -C "$PAGES" init
+            git -C "$PAGES" checkout -b gh-pages
+            git -C "$PAGES" remote add origin "$REPO_URL"
+          fi
+
+          git -C "$PAGES" config user.name  "github-actions[bot]"
+          git -C "$PAGES" config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Root deploys (main) protect preview/ and staging/ from deletion so
+          # feature-branch deployments aren't wiped every time main is pushed.
+          if [ "$FOLDER" = "." ]; then
+            rsync -a --delete \
+              --exclude='.git' --exclude='.github' \
+              --filter='protect preview/' \
+              --filter='protect staging/' \
+              ./ "$PAGES/"
+          else
+            mkdir -p "$PAGES/$FOLDER"
+            rsync -a --delete \
+              --exclude='.git' --exclude='.github' \
+              ./ "$PAGES/$FOLDER/"
+          fi
+
+          touch "$PAGES/.nojekyll"
+
+          git -C "$PAGES" add -A
+          if git -C "$PAGES" diff --cached --quiet; then
+            echo "Nothing changed — skipping commit."
+          else
+            git -C "$PAGES" commit -m "deploy: ${{ github.ref_name }} @ ${{ github.sha }}"
+            git -C "$PAGES" push origin gh-pages
+            echo "✅ Live at ${{ steps.target.outputs.url }}"
+          fi
